@@ -1,0 +1,6 @@
+Select and build binutils/gcc.
+You can choose between all upstream versions via a curses menu provided by whiptail.
+Remember that not all binutils/gcc versions may compile with your host compiler.
+To use this build script, you'll need a working binutils/gcc/wget/whiptail(libnewt) installation.
+
+After compilation is done you can source a script named activate.sh in the gcc-*-root directory.
