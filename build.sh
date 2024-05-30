@@ -4,20 +4,21 @@ set -e
 set -x
 
 
-if [ ! -x "$(which ld)" -o ! -x "$(which gcc)" ]; then
+if [ ! -x "$(which ld)" -o ! -x "$(which gcc)" -o ! -x "$(which tar)" ]; then
 	echo "${0}: missing binutils/gcc"
 	exit 1
 fi
 
-if [ ! -x /usr/bin/wget -o ! -x /usr/bin/whiptail ]; then
-	echo "${0}: missing wget/whiptail"
-	echo "${0}: On Debian: \`sudo apt install wget whiptail\`"
-	echo "${0}: On ArchLinux: \`sudo pacman -S wget libnewt\`"
+if [ ! -x /usr/bin/wget -o ! -x /usr/bin/whiptail -o ! -x /usr/bin/gpg ]; then
+	echo "${0}: missing wget/whiptail/gpg"
+	echo "${0}: On Debian: \`sudo apt install wget whiptail gpg\`"
+	echo "${0}: On ArchLinux: \`sudo pacman -S wget libnewt gpg\`"
 	exit 1
 fi
 
 BIN_DLSITE="https://ftp.gnu.org/gnu/binutils"
 GCC_DLSITE="https://bigsearcher.com/mirrors/gcc/releases"
+GCC_DLSITE_BACKUP="http://mirror.koddos.net/gcc/releases"
 CPUCORES=$(cat /proc/cpuinfo | grep -E '^processor' | wc -l)
 
 # download choosen binutils version
@@ -82,8 +83,34 @@ fi
 test -d ${BIN_BUILD} || tar -xvf binutils-${BINUTILS_VERSION}.tar.gz
 if [ ! -f "gcc-${GCC_VERSION}.tar.bz2" -a ! -f "gcc-${GCC_VERSION}.tar.gz" ]; then
 	wget -O "gcc-${GCC_VERSION}.tar.bz2" "${GCC_DLSITE}/gcc-${GCC_VERSION}/gcc-${GCC_VERSION}.tar.bz2" || \
-        { rm -f "gcc-${GCC_VERSION}.tar.bz2"; \
-            wget -O "gcc-${GCC_VERSION}.tar.gz" "${GCC_DLSITE}/gcc-${GCC_VERSION}/gcc-${GCC_VERSION}.tar.gz"; }
+		{ rm -f "gcc-${GCC_VERSION}.tar.bz2"; \
+			wget -O "gcc-${GCC_VERSION}.tar.gz" "${GCC_DLSITE}/gcc-${GCC_VERSION}/gcc-${GCC_VERSION}.tar.gz" || \
+			rm -f "gcc-${GCC_VERSION}.tar.gz"; }
+fi
+if [ ! -f "gcc-${GCC_VERSION}.tar.bz2" -a ! -f "gcc-${GCC_VERSION}.tar.gz" ]; then
+	wget -O "gcc-${GCC_VERSION}.tar.bz2" "${GCC_DLSITE_BACKUP}/gcc-${GCC_VERSION}/gcc-${GCC_VERSION}.tar.bz2" || \
+		{ rm -f "gcc-${GCC_VERSION}.tar.bz2"; \
+			wget -O "gcc-${GCC_VERSION}.tar.gz" "${GCC_DLSITE_BACKUP}/gcc-${GCC_VERSION}/gcc-${GCC_VERSION}.tar.gz" || \
+			{ rm -f "gcc-${GCC_VERSION}.tar.gz"; false; }; }
+fi
+if [ ! -f "gcc-${GCC_VERSION}.tar.bz2.sig" -a ! -f "gcc-${GCC_VERSION}.tar.gz.sig" ]; then
+	wget -O "gcc-${GCC_VERSION}.tar.bz2.sig" "${GCC_DLSITE_BACKUP}/gcc-${GCC_VERSION}/gcc-${GCC_VERSION}.tar.bz2.sig" || \
+		{ rm -f "gcc-${GCC_VERSION}.tar.bz2.sig"; \
+			wget -O "gcc-${GCC_VERSION}.tar.gz.sig" "${GCC_DLSITE_BACKUP}/gcc-${GCC_VERSION}/gcc-${GCC_VERSION}.tar.gz.sig" || \
+			{ rm -f "gcc-${GCC_VERSION}.tar.gz.sig"; false; }; }
+fi
+gpg --keyserver hkps://keyserver.ubuntu.com --receive-keys "B215 C163 3BCA 0477 615F 1B35 A5B3 A004 745C 015A"
+gpg --keyserver hkps://keyserver.ubuntu.com --receive-keys "B3C4 2148 A44E 6983 B3E4 CC07 93FA 9B1A B75C 61B8"
+gpg --keyserver hkps://keyserver.ubuntu.com --receive-keys "90AA 4704 69D3 965A 87A5 DCB4 94D0 3953 902C 9419"
+gpg --keyserver hkps://keyserver.ubuntu.com --receive-keys "80F9 8B2E 0DAB 6C82 81BD F541 A7C8 C3B2 F71E DF1C"
+gpg --keyserver hkps://keyserver.ubuntu.com --receive-keys "7F74 F97C 1034 68EE 5D75 0B58 3AB0 0996 FC26 A641"
+gpg --keyserver hkps://keyserver.ubuntu.com --receive-keys "33C2 35A3 4C46 AA3F FB29 3709 A328 C3A2 C3C4 5C06"
+gpg --keyserver hkps://keyserver.ubuntu.com --receive-keys "D3A9 3CAD 751C 2AF4 F8C7 AD51 6C35 B993 09B5 FA62"
+if [ -f "gcc-${GCC_VERSION}.tar.bz2.sig" ]; then
+    gpg --verify "gcc-${GCC_VERSION}.tar.bz2.sig"
+fi
+if [ -f "gcc-${GCC_VERSION}.tar.gz.sig" ]; then
+    gpg --verify "gcc-${GCC_VERSION}.tar.gz.sig"
 fi
 test ! -d ${GCC_BUILD} -a -r gcc-${GCC_VERSION}.tar.bz2 && tar -xvf gcc-${GCC_VERSION}.tar.bz2
 test ! -d ${GCC_BUILD} -a -r gcc-${GCC_VERSION}.tar.gz && tar -xvf gcc-${GCC_VERSION}.tar.gz
